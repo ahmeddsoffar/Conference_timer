@@ -1,7 +1,17 @@
 package com.global.hr.Entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "events")
 public class Event {
@@ -11,20 +21,7 @@ public class Event {
 
 	    private String eventName;
 
-		public Long getId() {
-			return id;
-		}
-
-		public void setId(Long id) {
-			this.id = id;
-		}
-
-		public String getEventName() {
-			return eventName;
-		}
-
-		public void setEventName(String eventName) {
-			this.eventName = eventName;
-		}
+        private LocalDateTime eventStartTime;
+        private LocalDateTime eventEndTime;
 
 }

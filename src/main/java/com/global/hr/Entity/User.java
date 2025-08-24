@@ -1,30 +1,29 @@
 package com.global.hr.Entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
 	 @Id
 	    @GeneratedValue(strategy = GenerationType.IDENTITY)
 	    private Long id;
 
-	    private String name;
+        private String name;
 
-		public Long getId() {
-			return id;
-		}
+        @Column(nullable = false, unique = true)
+        private String email;
 
-		public void setId(Long id) {
-			this.id = id;
-		}
+        @Column(nullable = false)
+        private String password;
 
-		public String getName() {
-			return name;
-		}
-
-		public void setName(String name) {
-			this.name = name;
-		}
 
 }
