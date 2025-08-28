@@ -1,50 +1,86 @@
 package com.global.hr.Service;
 
-import com.global.hr.DTO.EventDto;
+import com.global.hr.DTO.EventDtoRequest;
+import com.global.hr.DTO.EventDtoResponse;
 import com.global.hr.Entity.Event;
 import com.global.hr.Repo.EventRepo;
+import com.global.hr.exception.ResourceNotFoundException;
+
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class EventService {
+	@Autowired
     private final EventRepo eventRepo;
+    public EventService(EventRepo eventRepo) {
+		super();
+		this.eventRepo = eventRepo;
+	}
 
-    public Event createEvent(EventDto dto) {
-        Event event = Event.builder()
-                .eventName(dto.getEventName())
-                .eventStartTime(dto.getStartTime())
-                .eventEndTime(dto.getEndTime())
-                .build();
-        return eventRepo.save(event);
+    public EventDtoResponse createEvent(EventDtoRequest dto) {
+    	 Event event = new Event(
+    	            dto.getEventName(),
+    	            dto.getStartTime(),
+    	            dto.getEndTime()
+    	        );
+
+    	        Event saved = eventRepo.save(event);
+
+    	        return new EventDtoResponse(
+    	            saved.getEventName(),
+    	            saved.getEventStartTime(),
+    	            saved.getEventEndTime()
+    	        );
     }
 
-    public List<Event> getAllEvents() {
-        return eventRepo.findAll();
+    public List<EventDtoResponse> getAllEvents() {
+        return eventRepo.findAll().stream()
+                .map(event -> new EventDtoResponse(
+                        event.getEventName(),
+                        event.getEventStartTime(),
+                        event.getEventEndTime()
+                ))
+                .toList();
     }
 
-    public Event getEventById(Long id) {
-        return eventRepo.findById(id).orElse(null);
+    public EventDtoResponse getEventById(Long id) {
+        Event event = eventRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id " + id));
+
+        return new EventDtoResponse(
+                event.getEventName(),
+                event.getEventStartTime(),
+                event.getEventEndTime()
+        );
     }
 
-    public Event updateEvent(Long id, EventDto dto) {
+    public EventDtoResponse updateEvent(Long id, EventDtoRequest dto) {
         return eventRepo.findById(id)
                 .map(existing -> {
                     existing.setEventName(dto.getEventName());
                     existing.setEventStartTime(dto.getStartTime());
                     existing.setEventEndTime(dto.getEndTime());
-                    return eventRepo.save(existing);
+
+                    Event saved = eventRepo.save(existing);
+                    // map back to DTO
+                    return new EventDtoResponse(
+                            saved.getEventName(),
+                            saved.getEventStartTime(),
+                            saved.getEventEndTime()
+                    );
                 })
-                .orElse(null);
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
     }
 
-    public void deleteEvent(Long id) {
-        if (eventRepo.existsById(id)) {
-            eventRepo.deleteById(id);
-        }
+	public void deleteEvent(Long id) {
+		Event event = eventRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id " + id));
+        eventRepo.delete(event);
     }
 
     

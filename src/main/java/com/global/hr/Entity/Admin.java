@@ -9,11 +9,18 @@ public class Admin {
 	 @Id
 	 @GeneratedValue(strategy = GenerationType.IDENTITY)
 	    private Long id;
-
-	    private String staffName;
-	    private String password;
+	 @Column(nullable = false, unique = true)
+     private String email;
+	 private String staffName;
+	 private String password;
 		public Long getId() {
 			return id;
+		}
+		public String getEmail() {
+			return email;
+		}
+		public void setEmail(String email) {
+			this.email = email;
 		}
 		public void setId(Long id) {
 			this.id = id;
