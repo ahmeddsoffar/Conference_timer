@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 
 import com.global.hr.DTO.AdminDtoRequest;
 import com.global.hr.DTO.AdminDtoResponse;
@@ -23,6 +26,8 @@ import com.global.hr.Service.AdminService;
 import com.global.hr.Service.EventService;
 import com.global.hr.Service.AttendanceService;
 import com.global.hr.DTO.BulkCheckoutResponse;
+import com.global.hr.Service.ExportService;
+import com.global.hr.DTO.AttendeeExportResponse;
 
 @RestController
 //@RequestMapping("/auth")
@@ -31,13 +36,15 @@ public class AdminController {
     private  final EventService eventService;
 	private final AdminService adminService;
 	private final AttendanceService attendanceService;
+	private final ExportService exportService;
 
     
-	public AdminController(EventService eventService,AdminService adminService,AttendanceService attendanceService) {
+	public AdminController(EventService eventService,AdminService adminService,AttendanceService attendanceService,ExportService exportService) {
 		super();
 		this.eventService = eventService;
 		this.adminService=adminService;
 		this.attendanceService=attendanceService;
+		this.exportService=exportService;
 	}
 	 @PostMapping("/auth/register")
 	    public ResponseEntity<AdminDtoResponse> register(@RequestBody AdminDtoRequest dto) {
@@ -78,5 +85,15 @@ public class AdminController {
     public ResponseEntity<BulkCheckoutResponse> checkoutAllAttendees(@PathVariable Long eventId) {
         BulkCheckoutResponse response = attendanceService.checkoutAllAttendeesForEvent(eventId);
         return ResponseEntity.ok(response);
+    }
+
+	@GetMapping(value = "/event/{eventId}/export/attendees", produces = "text/csv")
+    public ResponseEntity<String> exportAttendeesCSV(@PathVariable Long eventId) {
+        AttendeeExportResponse response = exportService.exportAttendeesForEvent(eventId);
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + response.getFilename() + "\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(response.getCsvContent());
     }
 }
