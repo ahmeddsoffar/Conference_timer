@@ -9,12 +9,15 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.global.hr.DTO.AttendanceDtoResponse;
+import com.global.hr.DTO.BulkCheckoutResponse;
 import com.global.hr.Entity.AttendanceEvent;
 import com.global.hr.Entity.AttendanceEventType;
+import com.global.hr.Entity.Event;
 import com.global.hr.Entity.Registration;
 import com.global.hr.Entity.RegistrationStatus;
 import com.global.hr.Repo.AttendanceEventRepo;
 import com.global.hr.Repo.RegistrationRepo;
+import com.global.hr.Repo.EventRepo;
 
 import java.time.Duration;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +26,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class AttendanceService {
 	private final RegistrationRepo registrationRepo;
     private final AttendanceEventRepo eventRepo;
+    private final EventRepo eventRepository;
 
     public AttendanceService(RegistrationRepo registrationRepo,
-                             AttendanceEventRepo eventRepo) {
+                             AttendanceEventRepo eventRepo, EventRepo eventRepository) {
         this.registrationRepo = registrationRepo;
         this.eventRepo = eventRepo;
+        this.eventRepository = eventRepository;
     }
     @Transactional
     public AttendanceDtoResponse handleScanByCode(String code, String action, String idempotencyKey) {
@@ -137,5 +142,42 @@ public class AttendanceService {
         return Math.round(hours * 4.0) / 4.0;   // round to nearest 0.25 hr (15 mins)
     }
 
+
+    @Transactional
+    public BulkCheckoutResponse checkoutAllAttendeesForEvent(Long eventId) {
+        // Find the event
+        Event event = eventRepository.findById(eventId)
+            .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+        
+        // Get all registrations for this event
+        List<Registration> registrations = registrationRepo.findByEvent(event);
+        
+        int processedCount = 0;
+        int alreadyCheckedOutCount = 0;
+        
+        for (Registration registration : registrations) {
+            // Check the last attendance event for this registration
+            AttendanceEvent lastEvent = eventRepo.findFirstByRegistrationOrderByCreatedAtDesc(registration);
+            
+            // If there's no event or the last event is not CHECKOUT, create a checkout event
+            if (lastEvent == null || lastEvent.getEventType() != AttendanceEventType.CHECKOUT) {
+                AttendanceEvent checkoutEvent = new AttendanceEvent();
+                checkoutEvent.setRegistration(registration);
+                checkoutEvent.setEventType(AttendanceEventType.CHECKOUT);
+                checkoutEvent.setMeta("{\"admin_bulk_checkout\": true}");
+                eventRepo.save(checkoutEvent);
+                processedCount++;
+            } else {
+                alreadyCheckedOutCount++;
+            }
+        }
+        
+        return new BulkCheckoutResponse(
+            eventId, 
+            registrations.size(), 
+            processedCount, 
+            alreadyCheckedOutCount
+        );
+    }
 
 }

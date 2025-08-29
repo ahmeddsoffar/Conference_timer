@@ -21,18 +21,23 @@ import com.global.hr.DTO.EventDtoResponse;
 import com.global.hr.Entity.Event;
 import com.global.hr.Service.AdminService;
 import com.global.hr.Service.EventService;
+import com.global.hr.Service.AttendanceService;
+import com.global.hr.DTO.BulkCheckoutResponse;
+
 @RestController
 //@RequestMapping("/auth")
 public class AdminController {
 	@Autowired
     private  final EventService eventService;
 	private final AdminService adminService;
+	private final AttendanceService attendanceService;
 
     
-	public AdminController(EventService eventService,AdminService adminService) {
+	public AdminController(EventService eventService,AdminService adminService,AttendanceService attendanceService) {
 		super();
 		this.eventService = eventService;
 		this.adminService=adminService;
+		this.attendanceService=attendanceService;
 	}
 	 @PostMapping("/auth/register")
 	    public ResponseEntity<AdminDtoResponse> register(@RequestBody AdminDtoRequest dto) {
@@ -64,8 +69,14 @@ public class AdminController {
     }
 
     @DeleteMapping("/event/deleteevent/{id}")
-    public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {	
     	 eventService.deleteEvent(id);
     	    return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/event/{eventId}/checkoutall")
+    public ResponseEntity<BulkCheckoutResponse> checkoutAllAttendees(@PathVariable Long eventId) {
+        BulkCheckoutResponse response = attendanceService.checkoutAllAttendeesForEvent(eventId);
+        return ResponseEntity.ok(response);
     }
 }

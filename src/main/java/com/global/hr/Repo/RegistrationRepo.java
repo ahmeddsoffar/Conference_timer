@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import com.global.hr.Entity.Event;
 import com.global.hr.Entity.Registration;
 import com.global.hr.Entity.User;
+import java.util.List;
 
 import jakarta.persistence.LockModeType;
 
@@ -20,5 +21,7 @@ public interface RegistrationRepo extends JpaRepository <Registration, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from Registration r where r.code = :code")
     Optional<Registration> findByCodeForUpdate(@Param("code") String code);
+
+    List<Registration> findByEvent(Event event);
 
 }
