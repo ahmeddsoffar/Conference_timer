@@ -54,7 +54,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/event/**").hasRole("ADMIN")
+                .requestMatchers("/scan/**").hasRole("ADMIN")
                 .requestMatchers("/users/**").hasRole("USER")
+                .requestMatchers("/attendee/**").hasRole("USER")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
