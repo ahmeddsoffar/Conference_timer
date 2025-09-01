@@ -3,6 +3,7 @@ package com.global.hr.Service;
 
 import java.util.Base64;
 import java.util.UUID;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,5 +65,19 @@ public class RegistrationService {
         Registration reg = regRepo.findByIdAndUserId(regId, requestingUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Registration not found or not yours."));
         return qrCodeService.generatePng(reg.getCode(), 300, 300);
+    }
+
+    public List<RegistrationDtoResponse> getUserRegistrations(String userEmail) {
+        User user = userRepo.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userEmail));
+        
+        return regRepo.findByUser(user).stream()
+                .map(reg -> new RegistrationDtoResponse(
+                    reg.getId(), 
+                    reg.getEvent().getId(), 
+                    reg.getCode(), 
+                    Base64.getEncoder().encodeToString(qrCodeService.generatePng(reg.getCode(), 300, 300))
+                ))
+                .toList();
     }
 }

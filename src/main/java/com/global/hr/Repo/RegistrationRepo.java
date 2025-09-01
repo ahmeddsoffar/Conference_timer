@@ -23,5 +23,6 @@ public interface RegistrationRepo extends JpaRepository <Registration, Long> {
     Optional<Registration> findByCodeForUpdate(@Param("code") String code);
 
     List<Registration> findByEvent(Event event);
+    List<Registration> findByUser(User user);
 
 }

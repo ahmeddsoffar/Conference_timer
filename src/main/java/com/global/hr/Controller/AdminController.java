@@ -21,6 +21,7 @@ import com.global.hr.DTO.AdminDtoRequest;
 import com.global.hr.DTO.AdminDtoResponse;
 import com.global.hr.DTO.EventDtoRequest;
 import com.global.hr.DTO.EventDtoResponse;
+import com.global.hr.DTO.DashboardStatsResponse;
 import com.global.hr.Entity.Event;
 import com.global.hr.Service.AdminService;
 import com.global.hr.Service.EventService;
@@ -28,6 +29,7 @@ import com.global.hr.Service.AttendanceService;
 import com.global.hr.DTO.BulkCheckoutResponse;
 import com.global.hr.Service.ExportService;
 import com.global.hr.DTO.AttendeeExportResponse;
+import com.global.hr.DTO.EventAttendeeResponse;
 
 @RestController
 //@RequestMapping("/auth")
@@ -95,5 +97,20 @@ public class AdminController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + response.getFilename() + "\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(response.getCsvContent());
+    }
+
+    @GetMapping("/event/{eventId}/attendees")
+    public ResponseEntity<List<EventAttendeeResponse>> getEventAttendees(@PathVariable Long eventId) {
+        List<EventAttendeeResponse> attendees = attendanceService.getEventAttendees(eventId);
+        return ResponseEntity.ok(attendees);
+    }
+    
+    /**
+     * Get dashboard statistics for admin
+     */
+    @GetMapping("/admin/dashboard/stats")
+    public ResponseEntity<DashboardStatsResponse> getDashboardStats() {
+        DashboardStatsResponse stats = adminService.getDashboardStats();
+        return ResponseEntity.ok(stats);
     }
 }

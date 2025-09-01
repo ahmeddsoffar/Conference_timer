@@ -32,6 +32,7 @@ public class EventService {
     	        Event saved = eventRepo.save(event);
 
     	        return new EventDtoResponse(
+    	            saved.getId(),
     	            saved.getEventName(),
     	            saved.getEventStartTime(),
     	            saved.getEventEndTime()
@@ -41,6 +42,7 @@ public class EventService {
     public List<EventDtoResponse> getAllEvents() {
         return eventRepo.findAll().stream()
                 .map(event -> new EventDtoResponse(
+                        event.getId(),
                         event.getEventName(),
                         event.getEventStartTime(),
                         event.getEventEndTime()
@@ -53,6 +55,7 @@ public class EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id " + id));
 
         return new EventDtoResponse(
+                event.getId(),
                 event.getEventName(),
                 event.getEventStartTime(),
                 event.getEventEndTime()
@@ -69,6 +72,7 @@ public class EventService {
                     Event saved = eventRepo.save(existing);
                     // map back to DTO
                     return new EventDtoResponse(
+                            saved.getId(),
                             saved.getEventName(),
                             saved.getEventStartTime(),
                             saved.getEventEndTime()

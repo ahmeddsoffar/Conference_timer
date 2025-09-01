@@ -45,8 +45,7 @@ public class ExportService {
             // Write CSV header
             String[] header = {
                 "Attendee Name", "Email", "Registration Status", "Registration Date",
-                "Total Time (Hours)", "Check-in Time", "Check-out Time", 
-                "Total Attendance Events", "Last Activity"
+                "Total Time (Hours)", "Check-in Time", "Check-out Time"
             };
             csvWriter.writeNext(header);
             
@@ -61,7 +60,6 @@ public class ExportService {
                 String totalTime = calculateTotalAttendanceTime(events);
                 String checkinTime = getFirstCheckinTime(events);
                 String checkoutTime = getLastCheckoutTime(events);
-                String lastActivity = getLastActivityTime(events);
                 
                 String[] row = {
                     user.getName(),
@@ -70,9 +68,7 @@ public class ExportService {
                     registration.getCreatedAt().toString(),
                     totalTime,
                     checkinTime,
-                    checkoutTime,
-                    String.valueOf(events.size()),
-                    lastActivity
+                    checkoutTime
                 };
                 csvWriter.writeNext(row);
             }
@@ -151,10 +147,5 @@ public class ExportService {
             .orElse("N/A");
     }
 
-    private String getLastActivityTime(List<AttendanceEvent> events) {
-        return events.stream()
-            .map(e -> e.getCreatedAt().toString())
-            .reduce((first, second) -> second)
-            .orElse("N/A");
-    }
+
 }
