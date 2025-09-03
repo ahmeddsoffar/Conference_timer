@@ -3,7 +3,7 @@ import { ApiError } from "./types";
 
 // API Configuration
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://192.168.1.5:8080";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://192.168.1.32:8080";
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Scanner } from '@yudiel/react-qr-scanner';
 import {
   Card,
   CardContent,
@@ -49,10 +50,8 @@ interface ScanResult {
 
 export default function QRScannerPage() {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  
+  // QrScanner handles all camera and scanning functionality
+
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,12 +61,12 @@ export default function QRScannerPage() {
   const [scanCount, setScanCount] = useState(0);
   const [lastScannedData, setLastScannedData] = useState<string>("");
   const [selectedAction, setSelectedAction] = useState<string>("CHECKIN");
+  const [scanLoopActive, setScanLoopActive] = useState(false);
 
-  // Check if user is authenticated as admin
+  // ✅ Authentication check
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
-    
     if (!token || role !== "ADMIN") {
       router.push("/admin/login");
     }
@@ -77,30 +76,24 @@ export default function QRScannerPage() {
     try {
       setError(null);
       setIsLoading(true);
+
+      // QrScanner handles camera access automatically
+
+      // QrScanner handles everything automatically
+      setHasPermission(true);
+      setIsScanning(true);
+      setScanLoopActive(true);
       
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment", // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setHasPermission(true);
-        setIsScanning(true);
-        startScanning();
-      }
-    } catch (err: any) {
-      console.error("Camera permission error:", err);
-      if (err.name === "NotAllowedError") {
-        setError("Camera permission denied. Please allow camera access to scan QR codes.");
-      } else if (err.name === "NotFoundError") {
-        setError("No camera found on this device.");
+      console.log("✅ Camera started successfully");
+    } catch (err: unknown) {
+      console.error("Camera error:", err);
+      const error = err as Error;
+      if (error.name === "NotAllowedError") {
+        setError("Camera permission denied. Please allow access.");
+      } else if (error.name === "NotFoundError") {
+        setError("No camera found.");
       } else {
-        setError("Failed to access camera: " + err.message);
+        setError("Camera error: " + error.message);
       }
       setHasPermission(false);
     } finally {
@@ -109,138 +102,78 @@ export default function QRScannerPage() {
   }, []);
 
   const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
+    // QrScanner handles cleanup automatically
     setIsScanning(false);
     setHasPermission(false);
+    setScanLoopActive(false);
+    console.log("✅ Camera stopped");
   }, []);
 
-  const startScanning = useCallback(() => {
-    if (!isScanning || !videoRef.current || !canvasRef.current) return;
-
-    const scanFrame = () => {
-      if (!isScanning || !videoRef.current || !canvasRef.current) return;
-
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext("2d");
-
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        requestAnimationFrame(scanFrame);
-        return;
-      }
-
-      // Set canvas dimensions to match video
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      // Draw video frame to canvas
-      context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Get image data for QR code detection
-      const imageData = context?.getImageData(0, 0, canvas.width, canvas.height);
-      
-      if (imageData) {
-        // Use jsQR library to detect QR codes
-        // For now, we'll simulate QR detection
-        // In a real implementation, you'd use a QR library like jsQR
-        detectQRCode(imageData);
-      }
-
-      if (isScanning) {
-        requestAnimationFrame(scanFrame);
-      }
-    };
-
-    scanFrame();
-  }, [isScanning]);
-
-  const detectQRCode = async (imageData: ImageData) => {
-    try {
-      // For now, we'll use a simple approach to detect QR codes
-      // In production, you'd integrate with a QR library like jsQR
-      
-      // Check if we have a valid image to process
-      if (imageData.width === 0 || imageData.height === 0) {
-        return;
-      }
-
-      // Simple QR code detection simulation
-      // This is where you'd integrate jsQR or similar library
-      // For demo purposes, we'll use a manual trigger
-      
-      // TODO: Replace with actual QR detection library
-      // const code = jsQR(imageData.data, imageData.width, imageData.height);
-      // if (code) {
-      //   await processQRCode(code.data);
-      // }
-      
-    } catch (err) {
-      console.error("QR detection error:", err);
-    }
-  };
+  // QrScanner handles all scanning automatically - no need for complex scanning loop
 
   const processQRCode = async (qrData: string) => {
     try {
       setIsLoading(true);
       setError(null);
-
-      // Store the scanned data for debugging
       setLastScannedData(qrData);
-      
-      // Parse QR data to extract the registration code
-      // Expected format: REG:{registrationCode}:EVENT:{eventId}:USER:{userId}
-      const parts = qrData.split(":");
-      if (parts.length < 6) {
-        throw new Error("Invalid QR code format. Expected: REG:{code}:EVENT:{id}:USER:{id}");
+
+      // Handle different QR code formats
+      let registrationCode: string;
+      let eventId: number;
+
+      // Try to parse different formats
+      if (qrData.includes(":")) {
+        // Format: REG:123:EVENT:456:USER:789
+        const parts = qrData.split(":");
+        if (parts.length >= 4) {
+          registrationCode = parts[1] || qrData;
+          eventId = parseInt(parts[3]) || 1;
+        } else {
+          registrationCode = qrData;
+          eventId = 1;
+        }
+      } else {
+        // Single code format - treat as registration code
+        registrationCode = qrData;
+        eventId = 1;
       }
 
-      const registrationCode = parts[1]; // This is the actual code from the QR
-      const eventId = parseInt(parts[3]);
-      const userId = parseInt(parts[5]);
+      const idempotencyKey = `scan_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-      // Generate unique idempotency key to prevent duplicate scans
-      const idempotencyKey = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // Call the actual backend scan endpoint
       const response = await apiClient.post(API_ENDPOINTS.SCAN, {
-        code: registrationCode,        // The registration code from QR
-        action: selectedAction,        // Use selected action (CHECKIN, PAUSE, RESUME, CHECKOUT)
-        idempotencyKey: idempotencyKey // Prevent duplicate scans
+        code: registrationCode,
+        action: selectedAction,
+        idempotencyKey,
       });
 
-      console.log("Scan response:", response.data);
-
-      // Handle the response based on your backend format
-      if (response.data.registrationId) {
-        setScanResult({
-          success: true,
-          message: `Attendee ${selectedAction.toLowerCase()}ed successfully! 🎉\nCredit Hours: ${response.data.totalActiveSeconds || 0}`,
-          attendeeData: {
-            registrationId: response.data.registrationId,
-            userName: `User ${response.data.registrationId}`, // You might want to fetch user details separately
-            eventName: `Event ${eventId}`,
-            eventId: eventId,
-            currentStatus: response.data.status || selectedAction
-          },
-        });
-        setScanCount(prev => prev + 1);
-      } else {
-        setScanResult({
-          success: false,
-          message: "Check-in failed - invalid response from server",
-        });
-      }
-    } catch (err: any) {
-      console.error("Check-in error:", err);
+             if (response.data.registrationId) {
+         setScanResult({
+           success: true,
+           message: `Attendee ${selectedAction.toLowerCase()} successful! 🎉`,
+           attendeeData: {
+             registrationId: response.data.registrationId,
+             userName: response.data.userName || `User ${response.data.registrationId}`,
+             eventName: response.data.eventName || `Event ${eventId}`,
+             eventId,
+             currentStatus: response.data.status || selectedAction,
+           },
+         });
+         setScanCount((prev) => prev + 1);
+         
+         // Auto-reset scanner after successful scan to allow continuous scanning
+         setTimeout(() => {
+           setLastScannedData("");
+           console.log("🔄 Auto-reset scanner for next scan");
+         }, 2000); // Wait 2 seconds before auto-reset
+       } else {
+         setScanResult({ success: false, message: "Invalid server response" });
+       }
+    } catch (err: unknown) {
+      console.error("Scan error:", err);
+      const error = err as Error;
       setScanResult({
         success: false,
-        message: err.response?.data?.message || err.message || "Failed to process QR code",
+        message: error.message || "Scan failed",
       });
     } finally {
       setIsLoading(false);
@@ -249,9 +182,9 @@ export default function QRScannerPage() {
   };
 
   const handleManualQRInput = async () => {
-    const qrData = prompt("Enter QR code data manually:");
-    if (qrData) {
-      await processQRCode(qrData);
+    const qrData = prompt("Enter QR code data (e.g., REG:123:EVENT:456:USER:789 or just 123):");
+    if (qrData && qrData.trim()) {
+      await processQRCode(qrData.trim());
     }
   };
 
@@ -259,56 +192,50 @@ export default function QRScannerPage() {
     setScanResult(null);
     setShowResultDialog(false);
     setError(null);
+    setLastScannedData(""); // Reset the last scanned data to allow re-scanning
+    // Restart camera to continue scanning
     if (isScanning) {
-      startCamera();
+      stopCamera();
+      setTimeout(() => startCamera(), 100); // Small delay to ensure proper restart
     }
   };
 
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, [stopCamera]);
+  // QrScanner handles cleanup automatically
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">QR Scanner</h1>
-          <p className="text-muted-foreground">
-            Scan attendee QR codes to check them in automatically
-          </p>
+          <h1 className="text-3xl font-bold">QR Code Scanner</h1>
+          <p className="text-muted-foreground">Scan attendee QR codes for event management</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="secondary" className="text-sm">
-            Scans: {scanCount}
+        <div className="flex items-center space-x-4">
+          <Badge variant="default" className="text-sm">
+            <Users className="mr-1 h-3 w-3" />
+            Scanned: {scanCount}
           </Badge>
           <Badge variant="outline" className="text-sm">
-            Action: {selectedAction}
+            <Clock className="mr-1 h-3 w-3" />
+            {new Date().toLocaleTimeString()}
           </Badge>
-          <Button
-            variant="outline"
-            onClick={() => router.push("/admin/dashboard")}
-          >
-            Back to Dashboard
-          </Button>
         </div>
       </div>
 
-      {/* Camera Controls */}
+      {/* Main Scanner Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Camera className="h-5 w-5" />
-            <span>Camera Controls</span>
+            <QrCode className="h-5 w-5" />
+            Event Scanner
           </CardTitle>
           <CardDescription>
-            Start the camera to begin scanning QR codes
+            Use your device camera to scan QR codes or manually input registration data
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-4">
+        <CardContent className="space-y-6">
+          {/* Camera Controls */}
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={startCamera}
               disabled={isLoading || hasPermission}
@@ -332,23 +259,49 @@ export default function QRScannerPage() {
               Stop Camera
             </Button>
 
-            <Button
-              onClick={handleManualQRInput}
-              variant="outline"
-              className="hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out transform"
-            >
-              <QrCode className="mr-2 h-4 w-4" />
-              Manual Input
-            </Button>
+                         <Button
+               onClick={handleManualQRInput}
+               variant="outline"
+               className="hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out transform"
+             >
+               <QrCode className="mr-2 h-4 w-4" />
+               Manual Input
+             </Button>
+             
+             <Button
+               onClick={() => {
+                 setLastScannedData("");
+                 console.log("🔄 Scanner reset - ready for new scans");
+               }}
+               variant="outline"
+               className="hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out transform"
+             >
+               <RefreshCw className="mr-2 h-4 w-4" />
+               Reset Scanner
+             </Button>
 
-            <Button
-              onClick={() => processQRCode("REG:123:EVENT:456:USER:789")}
-              variant="outline"
-              className="hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out transform"
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Test Scan
-            </Button>
+                         <Button
+               onClick={() => processQRCode("REG:123:EVENT:456:USER:789")}
+               variant="outline"
+               className="hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out transform"
+             >
+               <CheckCircle className="mr-2 h-4 w-4" />
+               Test Scan
+             </Button>
+             
+                           <Button
+                onClick={() => {
+                  console.log("🔍 Manual scan test");
+                  console.log("Is scanning:", isScanning);
+                  console.log("Scan loop active:", scanLoopActive);
+                  console.log("Has permission:", hasPermission);
+                }}
+                variant="outline"
+                className="hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out transform"
+              >
+                <AlertCircle className="mr-2 h-4 w-4" />
+                Debug Info
+              </Button>
           </div>
 
           {/* Action Selection */}
@@ -368,7 +321,6 @@ export default function QRScannerPage() {
               ))}
             </div>
           </div>
-          </div>
 
           {error && (
             <Alert variant="destructive">
@@ -379,7 +331,7 @@ export default function QRScannerPage() {
 
           {/* Debug Info */}
           {lastScannedData && (
-            <Alert variant="secondary">
+            <Alert>
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center space-x-2">
                   <QrCode className="h-4 w-4" />
@@ -412,17 +364,32 @@ export default function QRScannerPage() {
           </CardHeader>
           <CardContent>
             <div className="relative">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full max-w-2xl mx-auto rounded-lg border shadow-lg"
-              />
-              <canvas
-                ref={canvasRef}
-                className="hidden"
-              />
+                                            <Scanner
+                 onScan={(detectedCodes) => {
+                   if (detectedCodes && detectedCodes.length > 0) {
+                     const result = detectedCodes[0].rawValue;
+                     console.log("🎯 QR Code detected:", result);
+                     if (result && result !== lastScannedData) {
+                       setLastScannedData(result);
+                       processQRCode(result);
+                     }
+                   }
+                 }}
+                 onError={(error: unknown) => {
+                   console.error("QR Scanner error:", error);
+                   const errorObj = error as Error;
+                   setError("Scanner error: " + errorObj.message);
+                 }}
+                 constraints={{
+                   facingMode: "environment",
+                   width: { ideal: 1280 },
+                   height: { ideal: 720 }
+                 }}
+                 formats={["qr_code"]}
+                 classNames={{
+                   container: "w-full max-w-2xl mx-auto rounded-lg border shadow-lg"
+                 }}
+               />
               
               {/* Scanning Overlay */}
               <div className="absolute inset-0 max-w-2xl mx-auto flex items-center justify-center">
@@ -443,6 +410,20 @@ export default function QRScannerPage() {
                   <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-sm text-primary/70 bg-background px-2">
                     {isScanning ? "Scanning..." : "Position QR code here"}
                   </div>
+                                     {isScanning && (
+                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                       <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium animate-pulse">
+                         🔍 ACTIVE
+                       </div>
+                     </div>
+                   )}
+                   {scanLoopActive && (
+                     <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+                       <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                         🔄 SCANNING
+                       </div>
+                     </div>
+                   )}
                 </div>
               </div>
             </div>
@@ -457,38 +438,31 @@ export default function QRScannerPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+            <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
               1
             </div>
             <div>
-              <p className="font-medium">Start the camera</p>
-              <p className="text-sm text-muted-foreground">
-                Click "Start Camera" and allow camera permissions when prompted
-              </p>
+              <p className="font-medium">Start Camera</p>
+			  <p className="text-sm text-muted-foreground">{'Click "Start Camera" to activate your device camera'}</p>
+
             </div>
           </div>
-          
           <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+            <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
               2
             </div>
             <div>
-              <p className="font-medium">Position the QR code</p>
-              <p className="text-sm text-muted-foreground">
-                Hold the attendee's QR code within the scanning area
-              </p>
+              <p className="font-medium">Position QR Code</p>
+              <p className="text-sm text-muted-foreground">Hold the QR code within the scanning frame</p>
             </div>
           </div>
-          
           <div className="flex items-start space-x-3">
-            <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+            <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
               3
             </div>
             <div>
-              <p className="font-medium">Automatic check-in</p>
-              <p className="text-sm text-muted-foreground">
-                The system will automatically detect the QR code and check in the attendee
-              </p>
+              <p className="font-medium">Select Action</p>
+              <p className="text-sm text-muted-foreground">Choose CHECKIN, PAUSE, RESUME, or CHECKOUT</p>
             </div>
           </div>
         </CardContent>
@@ -500,41 +474,48 @@ export default function QRScannerPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               {scanResult?.success ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                <CheckCircle className="h-5 w-5 text-green-600" />
               ) : (
-                <XCircle className="h-5 w-5 text-red-500" />
+                <AlertCircle className="h-5 w-5 text-red-600" />
               )}
-              <span>
-                {scanResult?.success ? "Check-in Successful" : "Check-in Failed"}
-              </span>
+              <span>Scan Result</span>
             </DialogTitle>
             <DialogDescription>
               {scanResult?.message}
             </DialogDescription>
           </DialogHeader>
           
-          {scanResult?.success && scanResult.attendeeData && (
-            <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{scanResult.attendeeData.userName}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{scanResult.attendeeData.eventName}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Status: {scanResult.attendeeData.currentStatus}</span>
+          {scanResult?.attendeeData && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Registration ID:</span>
+                  <p>{scanResult.attendeeData.registrationId}</p>
+                </div>
+                <div>
+                  <span className="font-medium">User Name:</span>
+                  <p>{scanResult.attendeeData.userName}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Event Name:</span>
+                  <p>{scanResult.attendeeData.eventName}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Status:</span>
+                  <p>{scanResult.attendeeData.currentStatus}</p>
+                </div>
               </div>
             </div>
           )}
           
-          <DialogFooter>
-            <Button onClick={resetScanner} className="w-full">
-              Continue Scanning
-            </Button>
-          </DialogFooter>
+                     <DialogFooter className="flex gap-2">
+             <Button onClick={resetScanner} variant="outline" className="flex-1">
+               Scan Another
+             </Button>
+             <Button onClick={() => setShowResultDialog(false)} className="flex-1">
+               Close
+             </Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
