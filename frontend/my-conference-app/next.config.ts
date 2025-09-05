@@ -13,9 +13,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
   },
   // Ensure proper production build
-  output: 'standalone',
-  // Disable telemetry
-  telemetry: false,
+  output: "standalone",
+  // Disable telemetry (moved to package.json)
 };
 
 export default nextConfig;
