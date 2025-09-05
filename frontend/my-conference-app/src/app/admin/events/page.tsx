@@ -19,23 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Calendar,
   Clock,
@@ -43,8 +27,6 @@ import {
   Users,
   Plus,
   Edit,
-  Trash2,
-  MoreHorizontal,
   Search,
   Filter,
 } from "lucide-react";
@@ -60,11 +42,7 @@ export default function AdminEventsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<EventDtoResponse | null>(
-    null
-  );
-  const [isDeleting, setIsDeleting] = useState(false);
+  // Deletion UI removed per request
 
   useEffect(() => {
     fetchEvents();
@@ -87,33 +65,7 @@ export default function AdminEventsPage() {
     }
   };
 
-  const handleDeleteEvent = async () => {
-    if (!eventToDelete) return;
-
-    try {
-      setIsDeleting(true);
-      await apiClient.delete(API_ENDPOINTS.DELETE_EVENT(eventToDelete.id));
-
-      // Remove event from local state
-      setEvents((prev) =>
-        prev.filter((event) => event.id !== eventToDelete.id)
-      );
-      setDeleteDialogOpen(false);
-      setEventToDelete(null);
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || "Failed to delete event";
-      setError(errorMessage);
-      console.error("Error deleting event:", err);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const confirmDelete = (event: EventDtoResponse) => {
-    setEventToDelete(event);
-    setDeleteDialogOpen(true);
-  };
+  // Delete handlers removed
 
   const getEventStatus = (event: EventDtoResponse) => {
     const now = new Date();
@@ -281,30 +233,18 @@ export default function AdminEventsPage() {
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                              <a href={`/admin/events/${event.id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Event
-                              </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => confirmDelete(event)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Event
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/admin/events/${event.id}/edit`);
+                          }}
+                          className="hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out transform"
+                          title="Edit Event"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
@@ -315,34 +255,7 @@ export default function AdminEventsPage() {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Event</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{eventToDelete?.eventName}"? This
-              action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteEvent}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete Event"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete dialog removed per request */}
     </div>
   );
 }

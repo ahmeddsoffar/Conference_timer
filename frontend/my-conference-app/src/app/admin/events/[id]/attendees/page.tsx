@@ -43,6 +43,7 @@ import {
   AlertCircle,
   PauseCircle,
   UserCheck,
+  Trash2,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/api";
@@ -61,6 +62,8 @@ export default function EventAttendeesPage() {
   const [isBulkCheckingOut, setIsBulkCheckingOut] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [performingAction, setPerformingAction] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (eventId) {
@@ -183,6 +186,21 @@ export default function EventAttendeesPage() {
         err.response?.data?.message || "Failed to export attendees";
       setError(errorMessage);
       console.error("Error exporting attendees:", err);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    try {
+      setIsDeleting(true);
+      await apiClient.delete(API_ENDPOINTS.DELETE_EVENT(parseInt(eventId)));
+      setDeleteDialogOpen(false);
+      router.push("/admin/events");
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Failed to delete event";
+      setError(errorMessage);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -342,6 +360,14 @@ export default function EventAttendeesPage() {
           >
             <Clock className="mr-2 h-4 w-4" />
             {autoRefresh ? "Auto-refresh ON" : "Auto-refresh OFF"}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Event
           </Button>
         </div>
       </div>
@@ -629,6 +655,43 @@ export default function EventAttendeesPage() {
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Checkout All
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Event Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Event</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this event? This action cannot be
+              undone. All attendance records and registrations for this event
+              will be removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteEvent}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
               )}
             </Button>
           </DialogFooter>

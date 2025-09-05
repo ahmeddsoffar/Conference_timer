@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import com.global.hr.Entity.Event;
 import com.global.hr.Entity.Registration;
 import com.global.hr.Entity.User;
+import com.global.hr.Entity.RegistrationStatus;
 import java.util.List;
 
 import jakarta.persistence.LockModeType;
