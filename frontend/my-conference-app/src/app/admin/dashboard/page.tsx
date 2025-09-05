@@ -87,13 +87,13 @@ export default function AdminDashboard() {
       const [statsResponse, eventsResponse] = (await Promise.all([
         Promise.race([statsPromise, timeoutPromise]),
         Promise.race([eventsPromise, timeoutPromise]),
-      ])) as [DashboardStatsResponse | null, EventDtoResponse[] | null];
+      ])) as [any, any];
 
       console.log("Dashboard stats response:", statsResponse);
       console.log("Events response:", eventsResponse);
 
-      const stats = statsResponse?.data as DashboardStatsResponse;
-      const events = eventsResponse?.data || [];
+      const stats = statsResponse.data as DashboardStatsResponse;
+      const events = eventsResponse.data;
 
       // Ensure events is an array
       if (!Array.isArray(events)) {
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
       const recentEventsData = events.slice(0, 5);
       console.log("Recent events data:", recentEventsData);
       setRecentEvents(recentEventsData);
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Error fetching dashboard data:", error);
       console.error("Error details:", {
         message: error?.message,

@@ -557,7 +557,7 @@ export default function EventAttendeesPage() {
                                 | "outline"
                                 | "secondary"
                                 | "destructive" = "outline";
-                              let buttonSize: "sm" | "xs" = "sm";
+                              const buttonSize: "sm" | "xs" = "sm";
 
                               // Customize button appearance based on action
                               if (action.action === "CHECKIN") {
