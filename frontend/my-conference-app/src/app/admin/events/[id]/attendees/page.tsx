@@ -123,7 +123,8 @@ export default function EventAttendeesPage() {
       setBulkCheckoutDialogOpen(false);
     } catch (err: unknown) {
       const errorMessage =
-        (err as any)?.response?.data?.message || "Failed to checkout all attendees";
+        (err as any)?.response?.data?.message ||
+        "Failed to checkout all attendees";
       setError(errorMessage);
       console.error("Error bulk checkout:", err);
     } finally {
