@@ -18,7 +18,8 @@ public class CorsConfig {
         // Allow requests from your frontend
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000",
-            "http://127.0.0.1:3000"
+            "http://127.0.0.1:3000",
+            "https://your-frontend-service.railway.app"
         ));
         
         // Allow all HTTP methods
