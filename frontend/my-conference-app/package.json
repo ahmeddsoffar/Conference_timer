@@ -7,7 +7,7 @@
     "dev:network": "next dev --turbopack --hostname 0.0.0.0",
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "build:turbo": "NODE_OPTIONS='--max-old-space-size=4096' next build --turbopack",
-    "start": "next start",
+    "start": "next start -p ${PORT:-3000}",
     "lint": "eslint"
   },
   "dependencies": {
