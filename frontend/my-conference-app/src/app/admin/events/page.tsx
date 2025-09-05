@@ -23,7 +23,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Calendar,
   Clock,
-  MapPin,
   Users,
   Plus,
   Edit,
@@ -31,7 +30,6 @@ import {
   Filter,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/api";
 import type { EventDtoResponse } from "@/lib/types";
@@ -55,9 +53,9 @@ export default function AdminEventsPage() {
 
       const response = await apiClient.get(API_ENDPOINTS.SHOW_EVENTS);
       setEvents(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message || "Failed to fetch events";
+        (err as any)?.response?.data?.message || "Failed to fetch events";
       setError(errorMessage);
       console.error("Error fetching events:", err);
     } finally {

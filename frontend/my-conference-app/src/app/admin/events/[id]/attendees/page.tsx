@@ -41,7 +41,6 @@ import {
   Download,
   CheckCircle,
   AlertCircle,
-  PauseCircle,
   UserCheck,
   Trash2,
 } from "lucide-react";
@@ -90,7 +89,7 @@ export default function EventAttendeesPage() {
         API_ENDPOINTS.GET_EVENT(parseInt(eventId))
       );
       setEvent(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching event details:", err);
     }
   };
@@ -104,9 +103,9 @@ export default function EventAttendeesPage() {
         API_ENDPOINTS.GET_EVENT_ATTENDEES(parseInt(eventId))
       );
       setAttendees(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message || "Failed to fetch attendees";
+        (err as any)?.response?.data?.message || "Failed to fetch attendees";
       setError(errorMessage);
       console.error("Error fetching attendees:", err);
     } finally {
@@ -122,9 +121,9 @@ export default function EventAttendeesPage() {
       // Refresh attendees list
       await fetchAttendees();
       setBulkCheckoutDialogOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message || "Failed to checkout all attendees";
+        (err as any)?.response?.data?.message || "Failed to checkout all attendees";
       setError(errorMessage);
       console.error("Error bulk checkout:", err);
     } finally {
@@ -150,9 +149,9 @@ export default function EventAttendeesPage() {
 
       // Refresh attendees list
       await fetchAttendees();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message ||
+        (err as any)?.response?.data?.message ||
         `Failed to ${action.toLowerCase()} attendee`;
       setError(errorMessage);
       console.error(`Error ${action.toLowerCase()}:`, err);
@@ -181,9 +180,9 @@ export default function EventAttendeesPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message || "Failed to export attendees";
+        (err as any)?.response?.data?.message || "Failed to export attendees";
       setError(errorMessage);
       console.error("Error exporting attendees:", err);
     }
@@ -195,9 +194,9 @@ export default function EventAttendeesPage() {
       await apiClient.delete(API_ENDPOINTS.DELETE_EVENT(parseInt(eventId)));
       setDeleteDialogOpen(false);
       router.push("/admin/events");
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage =
-        err.response?.data?.message || "Failed to delete event";
+        (err as any)?.response?.data?.message || "Failed to delete event";
       setError(errorMessage);
     } finally {
       setIsDeleting(false);

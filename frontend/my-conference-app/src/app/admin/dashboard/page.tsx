@@ -18,9 +18,7 @@ import {
   BarChart3,
   Plus,
   Clock,
-  MapPin,
   Edit,
-  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
@@ -87,7 +85,7 @@ export default function AdminDashboard() {
       const [statsResponse, eventsResponse] = (await Promise.all([
         Promise.race([statsPromise, timeoutPromise]),
         Promise.race([eventsPromise, timeoutPromise]),
-      ])) as [any, any];
+      ])) as [DashboardStatsResponse, EventDtoResponse[]];
 
       console.log("Dashboard stats response:", statsResponse);
       console.log("Events response:", eventsResponse);
@@ -125,13 +123,15 @@ export default function AdminDashboard() {
       const recentEventsData = events.slice(0, 5);
       console.log("Recent events data:", recentEventsData);
       setRecentEvents(recentEventsData);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching dashboard data:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStatus = (error as any)?.status || 'Unknown status';
       console.error("Error details:", {
-        message: error?.message,
-        status: error?.status,
-        response: error?.response,
-        stack: error?.stack,
+        message: errorMessage,
+        status: errorStatus,
+        response: (error as any)?.response,
+        stack: error instanceof Error ? error.stack : 'No stack trace',
       });
 
       // Set default values on error
